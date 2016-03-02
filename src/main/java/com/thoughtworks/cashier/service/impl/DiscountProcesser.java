@@ -59,7 +59,7 @@ public class DiscountProcesser implements IPromotionProcesser {
 
 			// 将小计金额和折扣信息设置到PrinterItem上
 			printerItem.setSubtotal(totalMoney.subtract(discountMoney));
-			printerItem.setExtraMessage("节省" + discountMoney.setScale(2).toPlainString() + "(元)");
+			printerItem.setExtraMessage("节省" + discountMoney.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString() + "(元)");
 
 			// 记录优惠金额到PrinterPromotionItem上
 			pproItem.setDiscountMoney(discountMoney);

@@ -1,58 +1,45 @@
 import java.math.BigDecimal;
+import java.util.Scanner;
 
 import org.junit.Test;
 
 import com.thoughtworks.cashier.service.CashierTicketPrinter;
 
-
 public class TestPrinter extends TestBase{
-	String appleCode = "ITEM000003";
-	String cokecoleCode = "ITEM000005";
-	String yumaoqiuCode = "ITEM000001";
-	
+	static String appleCode = "ITEM000003";
+	static String cokecoleCode = "ITEM000005";
+	static String yumaoqiuCode = "ITEM000001";
 
-	public String createSettlementJSON(int yumaoqiuCount, int cokecoleCount, BigDecimal appleCount){
+	public static String createSettlementJSON(int yumaoqiuCount, int cokecoleCount, BigDecimal appleCount) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < yumaoqiuCount; i++)
-	        sb.append("\"").append(yumaoqiuCode).append("\",");
-		
+			sb.append("\"").append(yumaoqiuCode).append("\",");
+
 		for (int i = 0; i < cokecoleCount; i++)
 			sb.append("\"").append(cokecoleCode).append("\",");
-		
-		if(appleCount.compareTo(BigDecimal.ZERO)==1)
+
+		if (appleCount.compareTo(BigDecimal.ZERO) == 1)
 			sb.append("\"").append(appleCode).append("-").append(appleCount.toPlainString()).append("\",");
 
-		sb.deleteCharAt(sb.length()-1); //删除末尾逗号
-		
-		return sb.length()>0 ? "["+sb.toString()+"]" : null; 
+		sb.deleteCharAt(sb.length() - 1); // 删除末尾逗号
+
+		return sb.length() > 0 ? "[" + sb.toString() + "]" : null;
 	}
-	
-	/**
-	 * 五个羽毛球/三个可乐/两斤苹果小票测试
-	 * @throws Exception
-	 */
+
 	@Test
-	public void testTicket532() throws Exception{
-		int yumaoqiuCount = 5;
-		int cokecoleCount = 3;
-		BigDecimal appleCount = new BigDecimal("2");
-		String settlement = createSettlementJSON(yumaoqiuCount, cokecoleCount, appleCount);
+	public void main() throws Exception {
+		Scanner sc = new Scanner(System.in);
+		System.out.print("收银系统\n输入羽毛球数量:\t");
+		int yumaoqiuCount = sc.nextInt();
+
+		System.out.print("输入可口可乐数量:\t");
+		int cokecoleCount = sc.nextInt();
+
+		System.out.print("输入苹果数量:\t");
+		Double appleCount = sc.nextDouble();
+
+		String settlement = createSettlementJSON(yumaoqiuCount, cokecoleCount, new BigDecimal(appleCount.toString()));
 		String content = CashierTicketPrinter.getInstance().getPrintContent(settlement);
-		System.out.println(content);
+		System.out.println("\r\n\r\n" + content + "\r\n\r\n");
 	}
-	
-	/**
-	 * 六个羽毛球/三个可乐/两斤苹果小票测试
-	 * @throws Exception
-	 */
-	@Test
-	public void testGood632() throws Exception{
-		int yumaoqiuCount = 6;
-		int cokecoleCount = 3;
-		BigDecimal appleCount = new BigDecimal("2");
-		String settlement = createSettlementJSON(yumaoqiuCount, cokecoleCount, appleCount);
-		String content = CashierTicketPrinter.getInstance().getPrintContent(settlement);
-		System.out.println(content);
-	}
-	
 }

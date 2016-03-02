@@ -96,8 +96,8 @@ public class CashierTicketPrinter {
 
 		// 打印底部结算区
 		sb.append("----------------------\r\n");
-		sb.append("总计：").append(totalMoney.setScale(2).toPlainString()).append("(元)\r\n");
-		sb.append("节省：").append(totalSaveMoney.setScale(2).toPlainString()).append("(元)\r\n");
+		sb.append("总计：").append(totalMoney.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("(元)\r\n");
+		sb.append("节省：").append(totalSaveMoney.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("(元)\r\n");
 		sb.append("**********************\r\n");
 
 		return sb.toString();
@@ -127,11 +127,11 @@ public class CashierTicketPrinter {
 					resultText.append("名称：").append(item.getGood().getName());
 					// 如果有优惠数量, 则输出优惠数量部分
 					if (item.getFreeAmount().compareTo(BigDecimal.ZERO) == 1) {
-						resultText.append("，数量：").append(item.getFreeAmount().setScale(1).toPlainString()).append(item.getGood().getCountUnit());
+						resultText.append("，数量：").append(item.getFreeAmount().setScale(1, BigDecimal.ROUND_HALF_UP).toPlainString()).append(item.getGood().getCountUnit());
 					}
 					// 如果有折扣金额, 则输出折扣部分
 					if (item.getDiscountMoney().compareTo(BigDecimal.ZERO) == 1) {
-						resultText.append("，折扣优惠：").append(item.getDiscountMoney().setScale(2).toPlainString()).append("元");
+						resultText.append("，折扣优惠：").append(item.getDiscountMoney().setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("元");
 					}
 					resultText.append("\r\n");
 				}
@@ -149,7 +149,7 @@ public class CashierTicketPrinter {
 		while (itor.hasNext()) {
 			PrinterItem item = items.get(itor.next());
 			Good good = item.getGood();
-			sb.append("名称：").append(good.getName()).append("，数量：").append(item.getAmount()).append(item.getGood().getCountUnit()).append("，单价：").append(good.getPrice().setScale(2).toPlainString()).append("(元)，小计：").append(item.getSubtotal().setScale(2).toPlainString()).append("(元)").append(item.getExtraMessage() == null ? "" : "," + item.getExtraMessage()).append("\r\n");
+			sb.append("名称：").append(good.getName()).append("，数量：").append(item.getAmount()).append(item.getGood().getCountUnit()).append("，单价：").append(good.getPrice().setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("(元)，小计：").append(item.getSubtotal().setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("(元)").append(item.getExtraMessage() == null ? "" : "," + item.getExtraMessage()).append("\r\n");
 
 			totalMoney = totalMoney.add(item.getSubtotal());
 		}
