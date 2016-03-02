@@ -110,30 +110,42 @@ public class CashierTicketPrinter {
 		if (promotions.size() > 0) {
 			Iterator<Integer> itor = promotions.keySet().iterator();
 			while (itor.hasNext()) {
+				StringBuilder sbPromotionItem = new StringBuilder();
+				
 				PrinterPromotion ppromotion = promotions.get(itor.next());
-				if (ppromotion.isIndependentPrint())
-					resultText.append(ppromotion.getPromotion().getName()).append("商品:\r\n");
 				List<PrinterPromotionItem> proItems = ppromotion.getItems();
 				int proItemsSize = proItems.size();
 				for (int i = 0; i < proItemsSize; i++) {
 					PrinterPromotionItem item = proItems.get(i);
+					
+					//如果当前商品没有优惠数量, 也没有折扣金额, 则直接跳过
+					if(item.getFreeAmount().compareTo(BigDecimal.ZERO)==0 && item.getDiscountMoney().compareTo(BigDecimal.ZERO)==0)
+						continue;
+					
+					//叠加计算总优惠金额
 					totalSaveMoney = totalSaveMoney.add(item.getDiscountMoney());
 					totalSaveMoney = totalSaveMoney.add(item.getGood().getPrice().multiply(item.getFreeAmount()));
-					// 如果不独立打印在优惠区域, 则直接跳出
+					
+					// 如果不独立打印在优惠区域, 则不继续组装输出部分
 					if (ppromotion.isIndependentPrint() == false)
 						continue;
 
 					// 格式化输出优惠活动明细
-					resultText.append("名称：").append(item.getGood().getName());
+					sbPromotionItem.append("名称：").append(item.getGood().getName());
 					// 如果有优惠数量, 则输出优惠数量部分
 					if (item.getFreeAmount().compareTo(BigDecimal.ZERO) == 1) {
-						resultText.append("，数量：").append(item.getFreeAmount().setScale(1, BigDecimal.ROUND_HALF_UP).toPlainString()).append(item.getGood().getCountUnit());
+						sbPromotionItem.append("，数量：").append(item.getFreeAmount().setScale(1, BigDecimal.ROUND_HALF_UP).toPlainString()).append(item.getGood().getCountUnit());
 					}
 					// 如果有折扣金额, 则输出折扣部分
 					if (item.getDiscountMoney().compareTo(BigDecimal.ZERO) == 1) {
-						resultText.append("，折扣优惠：").append(item.getDiscountMoney().setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("元");
+						sbPromotionItem.append("，折扣优惠：").append(item.getDiscountMoney().setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("元");
 					}
-					resultText.append("\r\n");
+					sbPromotionItem.append("\r\n");
+				}
+				
+				//组装本次要打印的营销活动所有明细
+				if (ppromotion.isIndependentPrint() && sbPromotionItem.length()>0){
+					resultText.append(ppromotion.getPromotion().getName()).append("商品:\r\n").append(sbPromotionItem.toString());
 				}
 			}
 		}
@@ -177,6 +189,7 @@ public class CashierTicketPrinter {
 		}
 	}
 
+	
 	/**
 	 * 将结算商品数据, 转换成营销活动的优惠数据
 	 * 
@@ -215,6 +228,7 @@ public class CashierTicketPrinter {
 		return promotions;
 	}
 
+	
 	/**
 	 * 将条码数据转换为PrinterItem, 去重并迭加总数.
 	 * 

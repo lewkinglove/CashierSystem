@@ -78,9 +78,17 @@ public class BuyGetFreeProcesser implements IPromotionProcesser {
 			// 计算小计金额; 公式: 原始总金额 - 免费数量*商品单价
 			BigDecimal subtotalMoney = totalMoney.subtract(freeCount.multiply(printerItem.getGood().getPrice()));
 
-			// 将小计金额和折扣信息设置到PrinterItem上
+			// 将小计金额设置到PrinterItem上
 			printerItem.setSubtotal(subtotalMoney);
 
+			//如果当前优惠涉及商品, 实际没有享受优惠, 则从优惠的list中移除
+			if(freeCount.compareTo(BigDecimal.ZERO)!=1){
+				promotionItemList.remove(pproItem);
+				i--;	//处理索引前移
+				promotionItemListSize = promotionItemList.size();	//重新获取list大小
+				continue;
+			}
+			
 			// 记录赠送数量到PrinterPromotionItem上
 			pproItem.setFreeAmount(freeCount);
 		}
