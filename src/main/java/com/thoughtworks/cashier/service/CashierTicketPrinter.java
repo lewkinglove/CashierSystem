@@ -97,7 +97,8 @@ public class CashierTicketPrinter {
 		// 打印底部结算区
 		sb.append("----------------------\r\n");
 		sb.append("总计：").append(totalMoney.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("(元)\r\n");
-		sb.append("节省：").append(totalSaveMoney.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("(元)\r\n");
+		if (totalSaveMoney.compareTo(BigDecimal.ZERO) == 1)
+			sb.append("节省：").append(totalSaveMoney.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString()).append("(元)\r\n");
 		sb.append("**********************\r\n");
 
 		return sb.toString();
@@ -111,21 +112,21 @@ public class CashierTicketPrinter {
 			Iterator<Integer> itor = promotions.keySet().iterator();
 			while (itor.hasNext()) {
 				StringBuilder sbPromotionItem = new StringBuilder();
-				
+
 				PrinterPromotion ppromotion = promotions.get(itor.next());
 				List<PrinterPromotionItem> proItems = ppromotion.getItems();
 				int proItemsSize = proItems.size();
 				for (int i = 0; i < proItemsSize; i++) {
 					PrinterPromotionItem item = proItems.get(i);
-					
-					//如果当前商品没有优惠数量, 也没有折扣金额, 则直接跳过
-					if(item.getFreeAmount().compareTo(BigDecimal.ZERO)==0 && item.getDiscountMoney().compareTo(BigDecimal.ZERO)==0)
+
+					// 如果当前商品没有优惠数量, 也没有折扣金额, 则直接跳过
+					if (item.getFreeAmount().compareTo(BigDecimal.ZERO) == 0 && item.getDiscountMoney().compareTo(BigDecimal.ZERO) == 0)
 						continue;
-					
-					//叠加计算总优惠金额
+
+					// 叠加计算总优惠金额
 					totalSaveMoney = totalSaveMoney.add(item.getDiscountMoney());
 					totalSaveMoney = totalSaveMoney.add(item.getGood().getPrice().multiply(item.getFreeAmount()));
-					
+
 					// 如果不独立打印在优惠区域, 则不继续组装输出部分
 					if (ppromotion.isIndependentPrint() == false)
 						continue;
@@ -142,9 +143,9 @@ public class CashierTicketPrinter {
 					}
 					sbPromotionItem.append("\r\n");
 				}
-				
-				//组装本次要打印的营销活动所有明细
-				if (ppromotion.isIndependentPrint() && sbPromotionItem.length()>0){
+
+				// 组装本次要打印的营销活动所有明细
+				if (ppromotion.isIndependentPrint() && sbPromotionItem.length() > 0) {
 					resultText.append(ppromotion.getPromotion().getName()).append("商品:\r\n").append(sbPromotionItem.toString());
 				}
 			}
@@ -189,7 +190,6 @@ public class CashierTicketPrinter {
 		}
 	}
 
-	
 	/**
 	 * 将结算商品数据, 转换成营销活动的优惠数据
 	 * 
@@ -228,7 +228,6 @@ public class CashierTicketPrinter {
 		return promotions;
 	}
 
-	
 	/**
 	 * 将条码数据转换为PrinterItem, 去重并迭加总数.
 	 * 
