@@ -36,10 +36,4 @@ public class JSONUtil {
 	public static <T> T unmarshal(String json, Class<T> clazz) {
 		return (T) instance.fromJson(json, clazz);
 	}
-
-	@SuppressWarnings("unchecked")
-	public static <T> T unmarshalList(String json, Class<?> clazz) {
-		return (T) json;
-	}
-
 }

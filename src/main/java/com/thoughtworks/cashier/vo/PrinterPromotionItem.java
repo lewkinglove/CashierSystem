@@ -18,12 +18,12 @@ public class PrinterPromotionItem {
 	/**
 	 * 不计费数量
 	 */
-	private BigDecimal freeAmount;
+	private BigDecimal freeAmount = BigDecimal.ZERO;
 
 	/**
 	 * 折扣扣减金额
 	 */
-	private BigDecimal discountMoney;
+	private BigDecimal discountMoney = BigDecimal.ZERO;
 
 	public Good getGood() {
 		return good;

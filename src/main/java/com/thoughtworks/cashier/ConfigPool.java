@@ -3,6 +3,7 @@ package com.thoughtworks.cashier;
 import java.util.Properties;
 
 import com.thoughtworks.cashier.common.db.DataSourcePool;
+import com.thoughtworks.cashier.service.CashierTicketPrinter;
 
 /**
  * 配置池
@@ -62,7 +63,7 @@ public class ConfigPool extends Properties {
 	}
 	
 	private void initExtraConfigs(){
-		
+		CashierTicketPrinter.setShopPrintName(this.getProperty("config.base.shopName"));
 	} 
 	
 	

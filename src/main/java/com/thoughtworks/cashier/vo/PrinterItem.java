@@ -19,13 +19,19 @@ public class PrinterItem {
 	 * 总数量<br>
 	 * 鉴于生鲜果蔬类可能非整, 所以使用Decimal
 	 */
-	private BigDecimal amount;
+	private BigDecimal amount = BigDecimal.ZERO;
 
 	/**
 	 * 小计金额<br>
 	 * 此金额为优惠处理器处理过的金额.
 	 */
 	private BigDecimal subtotal;
+	
+	/**
+	 * 额外信息<br>
+	 * 用于优惠处理器添加额外打印信息使用
+	 */
+	private String extraMessage;
 
 	public Good getGood() {
 		return good;
@@ -44,6 +50,8 @@ public class PrinterItem {
 	}
 
 	public BigDecimal getSubtotal() {
+		if(subtotal==null)
+			subtotal = getGood().getPrice().multiply(getAmount());
 		return subtotal;
 	}
 
@@ -60,9 +68,13 @@ public class PrinterItem {
 	}
 
 	/**
-	 * 额外信息<br>
-	 * 用于优惠处理器添加额外打印信息使用
+	 * 获取总计金额, 不包含优惠
+	 * @return
 	 */
-	private String extraMessage;
+	public BigDecimal getTotalMoney() {
+		if(this.getGood()==null)
+			return BigDecimal.ZERO;
+		return this.getGood().getPrice().multiply(this.getAmount());
+	}
 
 }

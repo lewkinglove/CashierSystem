@@ -10,6 +10,7 @@ import com.thoughtworks.cashier.dao.PromotionTargetDAO;
 import com.thoughtworks.cashier.dao.PromotionTypeDAO;
 import com.thoughtworks.cashier.vo.Good;
 import com.thoughtworks.cashier.vo.Promotion;
+import com.thoughtworks.cashier.vo.PromotionType;
 
 /**
  * 营销活动服务对象
@@ -76,5 +77,11 @@ public class PromotionService {
 		return null;
 	}
 	
+	public String getPromotionTypeCode(Promotion pro) throws Exception{
+		PromotionType type = proTypeDao.findByPk(pro.getPromotionType());
+		if(type!=null)
+			return type.getCode();
+		return null;
+	}
 	
 }

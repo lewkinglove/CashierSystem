@@ -10,6 +10,7 @@ import java.util.Map;
 
 import com.thoughtworks.cashier.common.db.exception.DataSourceNotFoundException;
 import com.thoughtworks.cashier.common.util.JSONUtil;
+import com.thoughtworks.cashier.vo.Good;
 import com.thoughtworks.cashier.vo.PrinterItem;
 import com.thoughtworks.cashier.vo.PrinterPromotion;
 import com.thoughtworks.cashier.vo.PrinterPromotionItem;
@@ -21,6 +22,8 @@ import com.thoughtworks.cashier.vo.Promotion;
  * @author liujing(lewkinglove@gmail.com)
  */
 public class CashierTicketPrinter {
+	private static String SHOP_PRINT_NAME;
+
 	private GoodService goodService;
 	private PromotionService promotionService;
 
@@ -35,6 +38,35 @@ public class CashierTicketPrinter {
 		return instance;
 	}
 
+	public static String getShopPrintName() {
+		return SHOP_PRINT_NAME;
+	}
+
+	public static void setShopPrintName(String shopName) {
+		SHOP_PRINT_NAME = shopName;
+	}
+
+	//@formatter:off
+	/**
+	 * 根据扫描机扫到的条码数据, 进行结算<br>
+	 * <pre>
+	 * 处理逻辑:
+	 * 条码List去重并迭加总数转换为PrinterItem
+	 * 循环所有的PrinterItem, 生成关联的所有营销活动信息
+	 * 循环所有的营销活动数据, 逐个从营销活动处理优惠 
+	 * 	将结算明细(PrinterItem)传入到营销活动的Factory. 
+	 * 	Factory根据营销类型返回营销活动处理器, 处理器处理结算项目, 并记录优惠数据. 
+	 * 
+	 * 打印小票头部 
+	 * 循环PrinterItem, 打印单个商品信息 -->并叠加计算结账总价 
+	 * 循环PrinterPromotion, 打印营销活动信息 -->并叠加计算优惠总数 
+	 * 打印小票结算区.
+	 * </pre>
+	 * @param settlement 结算的JSON格式条码数据
+	 * @return
+	 * @throws Exception
+	 */
+	 //@formatter:on
 	public String getPrintContent(String settlement) throws Exception {
 		if (settlement == null || settlement.trim().length() == 0)
 			throw new IllegalArgumentException("结算JSON数据不能为空");
@@ -42,79 +74,146 @@ public class CashierTicketPrinter {
 		ArrayList<String> codes = JSONUtil.unmarshal(settlement, ArrayList.class);
 		if (codes == null || codes.size() == 0)
 			throw new IllegalArgumentException("结算JSON数据不包含有效信息");
-		//@formatter:off
-		/**
-		 * 转换条码List为PrinterItem, 去重并迭加总数. 
-		 * 循环所有的PrinterItem 
-		 * 	获取对应的营销活动, 如果有的话. 
-		 * 	传入当前PrinterItem到营销活动的Dispatcher. 
-		 * 	Dispatcher转发至指定营销活动处理函数, 并返回PrinterPromotion优惠项目. 
-		 * 	PrinterPromotion包含不计费数量, 折扣扣减金额.等信息
-		 * 开始打印小票头部 
-		 * 循环PrinterItem, 打印单个商品信息 -->并叠加计算结账总价 
-		 * 循环PrinterPromotion, 打印营销活动信息 -->并叠加计算优惠总数 
-		 * 打印小票结算区.
-		 */
-		//@formatter:on
-		
-		//转换成结算商品数据
+
+		// 转换成结算商品数据
 		Map<String, PrinterItem> items = parsePrinterItem(codes);
-		System.out.println("-----------------------------");
-		System.out.println(JSONUtil.marshal(items));
 
-		//将结算商品数据, 转换成营销活动的优惠数据
+		// 将结算商品数据, 转换成营销活动的优惠数据
 		Map<Integer, PrinterPromotion> promotions = parsePromotionData(items);
-		System.out.println("-----------------------------");
-		System.out.println(JSONUtil.marshal(promotions));
-		
-		//TODO 将上面两步生成的数据, 交给优惠处理器进行处理
-		
-		
-		//TODO 对最终数据进行格式化输出
-		
 
-		return "";
+		// 将上面两步生成的数据, 交给优惠处理器进行处理
+		handlePromotion(items, promotions);
+
+		// TODO 对优惠处理器处理过的最终数据进行格式化输出
+		StringBuilder sb = new StringBuilder();
+		sb.append("***<").append(SHOP_PRINT_NAME).append(">购物清单***\r\n");
+
+		// 处理结算明细区的数据, 并接收结算总金额
+		BigDecimal totalMoney = handlerPrinterItem(items, sb);
+
+		// 处理优惠明细区的文本数据, 并接收优惠总金额
+		BigDecimal totalSaveMoney = handlerPrinterPromotion(promotions, sb);
+
+		// 打印底部结算区
+		sb.append("----------------------\r\n");
+		sb.append("总计：").append(totalMoney.setScale(2).toPlainString()).append("(元)\r\n");
+		sb.append("节省：").append(totalSaveMoney.setScale(2).toPlainString()).append("(元)\r\n");
+		sb.append("**********************\r\n");
+
+		return sb.toString();
+	}
+
+	private BigDecimal handlerPrinterPromotion(Map<Integer, PrinterPromotion> promotions, StringBuilder sb) {
+		BigDecimal totalSaveMoney = BigDecimal.ZERO;
+
+		StringBuilder resultText = new StringBuilder();
+		if (promotions.size() > 0) {
+			Iterator<Integer> itor = promotions.keySet().iterator();
+			while (itor.hasNext()) {
+				PrinterPromotion ppromotion = promotions.get(itor.next());
+				if (ppromotion.isIndependentPrint())
+					resultText.append(ppromotion.getPromotion().getName()).append("商品:\r\n");
+				List<PrinterPromotionItem> proItems = ppromotion.getItems();
+				int proItemsSize = proItems.size();
+				for (int i = 0; i < proItemsSize; i++) {
+					PrinterPromotionItem item = proItems.get(i);
+					totalSaveMoney = totalSaveMoney.add(item.getDiscountMoney());
+					totalSaveMoney = totalSaveMoney.add(item.getGood().getPrice().multiply(item.getFreeAmount()));
+					// 如果不独立打印在优惠区域, 则直接跳出
+					if (ppromotion.isIndependentPrint() == false)
+						continue;
+
+					// 格式化输出优惠活动明细
+					resultText.append("名称：").append(item.getGood().getName());
+					// 如果有优惠数量, 则输出优惠数量部分
+					if (item.getFreeAmount().compareTo(BigDecimal.ZERO) == 1) {
+						resultText.append("，数量：").append(item.getFreeAmount().setScale(1).toPlainString()).append(item.getGood().getCountUnit());
+					}
+					// 如果有折扣金额, 则输出折扣部分
+					if (item.getDiscountMoney().compareTo(BigDecimal.ZERO) == 1) {
+						resultText.append("，折扣优惠：").append(item.getDiscountMoney().setScale(2).toPlainString()).append("元");
+					}
+					resultText.append("\r\n");
+				}
+			}
+		}
+		if (resultText.length() > 0) {
+			sb.append("----------------------\r\n").append(resultText.toString());
+		}
+		return totalSaveMoney;
+	}
+
+	private BigDecimal handlerPrinterItem(Map<String, PrinterItem> items, StringBuilder sb) {
+		BigDecimal totalMoney = BigDecimal.ZERO;
+		Iterator<String> itor = items.keySet().iterator();
+		while (itor.hasNext()) {
+			PrinterItem item = items.get(itor.next());
+			Good good = item.getGood();
+			sb.append("名称：").append(good.getName()).append("，数量：").append(item.getAmount()).append(item.getGood().getCountUnit()).append("，单价：").append(good.getPrice().setScale(2).toPlainString()).append("(元)，小计：").append(item.getSubtotal().setScale(2).toPlainString()).append("(元)").append(item.getExtraMessage() == null ? "" : "," + item.getExtraMessage()).append("\r\n");
+
+			totalMoney = totalMoney.add(item.getSubtotal());
+		}
+		return totalMoney;
+	}
+
+	/**
+	 * 处理待结算商品的优惠信息
+	 * 
+	 * @param items
+	 * @param promotions
+	 * @throws Exception
+	 */
+	private void handlePromotion(Map<String, PrinterItem> items, Map<Integer, PrinterPromotion> promotions) throws Exception {
+		Iterator<Integer> itor = promotions.keySet().iterator();
+		while (itor.hasNext()) {
+			Integer promotionId = itor.next();
+			PrinterPromotion ppromotion = promotions.get(promotionId);
+
+			// 获取当前营销活动的类型识别码
+			String proTypeCode = promotionService.getPromotionTypeCode(ppromotion.getPromotion());
+
+			// 将数据交给优惠处理器进行处理
+			PromotionFactory.getProcesser(proTypeCode).process(ppromotion, items);
+		}
 	}
 
 	/**
 	 * 将结算商品数据, 转换成营销活动的优惠数据
+	 * 
 	 * @param items
 	 * @return
 	 * @throws SQLException
 	 * @throws DataSourceNotFoundException
 	 */
 	private Map<Integer, PrinterPromotion> parsePromotionData(Map<String, PrinterItem> items) throws SQLException, DataSourceNotFoundException {
-	    Map<Integer, PrinterPromotion> promotions = new HashMap<Integer, PrinterPromotion>();
+		Map<Integer, PrinterPromotion> promotions = new HashMap<Integer, PrinterPromotion>();
 		Iterator<String> itor = items.keySet().iterator();
-		while(itor.hasNext()){
+		while (itor.hasNext()) {
 			String code = itor.next();
 			PrinterItem item = items.get(code);
-			
+
 			Promotion suitPromotion = promotionService.getGoodsPromotion(item.getGood());
-			if(suitPromotion==null)
+			if (suitPromotion == null)
 				continue;
-			
-			//本次新增的优惠项目
+
+			// 本次新增的优惠项目
 			PrinterPromotionItem promotionItem = new PrinterPromotionItem();
 			promotionItem.setGood(item.getGood());
-			
+
 			PrinterPromotion printerPromotion = promotions.get(suitPromotion.getId());
-			if(printerPromotion==null){
-				//初始化PrinterPromotion
+			if (printerPromotion == null) {
+				// 初始化PrinterPromotion
 				printerPromotion = new PrinterPromotion();
 				printerPromotion.setPromotion(suitPromotion);
-				
-				//将当前优惠项目添加到PrinterPromotion Map中
+
+				// 将当前优惠项目添加到PrinterPromotion Map中
 				promotions.put(suitPromotion.getId(), printerPromotion);
 			}
-			//添加优惠商品项目
+			// 添加优惠商品项目
 			printerPromotion.addItems(promotionItem);
-			
-			System.out.println(JSONUtil.marshal(item.getGood()));
-			System.out.println(JSONUtil.marshal(suitPromotion));
 		}
-	    return promotions;
-    }
+		return promotions;
+	}
 
 	/**
 	 * 将条码数据转换为PrinterItem, 去重并迭加总数.
